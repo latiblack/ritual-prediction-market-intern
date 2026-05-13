@@ -178,20 +178,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* Ritual Chain Roadmap */}
-            <div style={{ marginTop: 16, background: '#141414', border: '1px solid rgba(0,212,170,0.2)', padding: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#00D4AA', marginBottom: 8, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                ⌭ Ritual Chain Roadmap
-              </div>
-              <div style={{ fontSize: 11, color: '#828282', lineHeight: 1.6 }}>
-                <p style={{ margin: '0 0 8px' }}>
-                  This is the <strong style={{ color: '#FFF' }}>open-source frontend</strong>. The full backend version with PostgreSQL, automated market fetching, and scheduled AI analysis is private.
-                </p>
-                <p style={{ margin: 0 }}>
-                  On-chain deployment on <strong style={{ color: '#00D4AA' }}>Ritual Chain</strong> will move data fetching → HTTP precompile (0x0801) and AI analysis → LLM precompile (0x0802), with user-configurable condition alerts via the Scheduler (0x56e7).
-                </p>
-              </div>
-            </div>
+
           </div>
         )}
       </main>

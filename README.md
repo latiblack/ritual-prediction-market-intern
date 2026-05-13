@@ -1,112 +1,132 @@
-# 🔮 ritual-prediction-market-intern
+# 🔮 Prediction Market Intelligence
 
-**Browse Polymarket prediction markets and analyze them with LLMs — zero backend required.** Built as a stepping stone to deploying on [Ritual Chain](https://ritual.net), the AI-native L1.
-
-Your browser talks directly to NVIDIA's LLM API. The only serverless function is a thin proxy to bypass Polymarket's CORS restrictions. No database, no auth, no backend to maintain.
+**Browse Polymarket prediction markets and analyze them with AI — zero backend required.** Your browser talks directly to NVIDIA's LLM API. Also includes deployable Solidity contracts for [Ritual Chain](https://ritual.net).
 
 ---
 
-## ✨ Features
+## 🧱 Project Structure
 
-- Live market list from Polymarket (CLOB API)
-- AI-powered analysis with configurable models (DeepSeek V4 Flash, Llama 3.1, Mistral, R1)
-- GPU-accelerated inference via NVIDIA NIM
-- Zero backend — API key stays in your browser's `localStorage`
-- Built-in instructions panel for getting your free NVIDIA API key
-- Roadmap panel showing the Ritual Chain deployment path
-
-## 🧱 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 16 (App Router) + Tailwind CSS v4 |
-| Market data | Polymarket CLOB API (via Vercel function proxy) |
-| AI inference | NVIDIA NIM API (directly from browser) |
-| On-chain target | Ritual Chain — LLM precompile, Sovereign Agent |
-
-## 🚀 Quick Start
-
-### 1. Clone & install
-
-```bash
-git clone https://github.com/latiblack/ritual-prediction-market-intern.git
-cd ritual-prediction-market-intern
-npm install
+```
+├── app/              # Next.js frontend (standalone)
+├── contracts/        # Solidity contracts for Ritual Chain
+└── README.md
 ```
 
-### 2. Get an NVIDIA API key
+---
 
-1. Go to **[build.nvidia.com](https://build.nvidia.com/explore/llama)**
-2. Sign up or log in
-3. Click **Get API Key** — a free tier key is available immediately
-4. Copy the key (starts with `nvapi-`)
+# 🖥️ Frontend — Polymarket Analyzer
 
-### 3. Polymarket API proxy setup (required)
+A zero-backend prediction market analyzer. No database, no auth, nothing to maintain.
 
-Polymarket's API blocks browser CORS, so you need a tiny Vercel proxy:
+### Features
 
-**Option A — Use the `/api/proxy` route (already set up):**
+- Live market feed from Polymarket CLOB API
+- AI analysis via NVIDIA NIM (DeepSeek V4 Flash, Llama 3.1, Mistral, R1)
+- API key stays in your browser's `localStorage`
+- Built-in instructions to get a free NVIDIA API key
 
-The repo includes `app/api/proxy/route.ts` — a thin proxy that forwards to `clob.polymarket.com`. Works on Vercel and in local dev.
-
-**Option B — Test locally (bypass CORS in dev):**
-
-Just run `npm run dev` — the proxy works locally too via Next.js route handlers. No extra config needed.
-
-### 4. Run
+### Quick Start
 
 ```bash
+npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`, paste your NVIDIA key in the settings panel, and start analyzing markets.
+Open `http://localhost:3000`, paste your NVIDIA key, analyze markets.
 
-## 🌐 Deploy to Vercel
-
-The easiest way to get everything working (including the Polymarket CORS proxy):
+### Deploy to Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/latiblack/ritual-prediction-market-intern)
 
-Or CLI:
+No env vars needed. The Polymarket CORS proxy at `/api/proxy` works out of the box.
+
+---
+
+# ⛓️ Contracts — Ritual Chain
+
+Deploy on-chain prediction market contracts to **Ritual Chain** (Chain ID: 1979). Uses Ritual's **HTTP precompile (0x0801)** to fetch live Polymarket data and **LLM precompile (0x0802)** for on-chain analysis — all inside TEE-verified transactions.
+
+Anyone with testnet RITUAL from the [Ritual faucet](https://faucet.ritual.net) can deploy and use these contracts.
+
+### Contracts
+
+| Contract | Description |
+|----------|-------------|
+| `MarketFetcher` | Calls HTTP precompile to fetch Polymarket markets on-chain |
+| `MarketAnalyzer` | Fetches market data + analyzes it via LLM precompile |
+
+### Prerequisites
+
 ```bash
-npm i -g vercel
-vercel deploy
+# Install Foundry (if not already installed)
+curl -L https://foundry.paradigm.xyz | bash && foundryup
 ```
 
-No environment variables needed — the app is self-contained.
+### Deploy
 
-## ⛓️ Ritual Chain Roadmap
+```bash
+cd contracts
 
-This app is designed to evolve into a fully on-chain prediction market agent on Ritual Chain:
+# 1. Copy and fill in env vars
+cp .env.example .env
+# Edit .env: PRIVATE_KEY, RPC_URL, HTTP_EXECUTOR, LLM_EXECUTOR
 
-1. **Current:** Browser-based analysis using NVIDIA NIM (direct API calls)
-2. **Next:** Migrate AI inference on-chain using Ritual's **LLM precompile**
-3. **Future:** Deploy a **Sovereign Agent** that autonomously monitors markets and submits predictions
+# 2. Find executors from TEEServiceRegistry
+cast call 0x9644e8562cE0Fe12b4deeC4163c064A8862Bf47F \
+  "getServicesByCapability(uint8,bool)((address,address,uint8,bytes,bytes,bytes32,uint8),bool,bytes32[])" \
+  0 true --rpc-url $RITUAL_RPC_URL
 
-Ritual Chain features this app will use:
-- **LLM precompile** — on-chain inference for market analysis
-- **Sovereign Agent** — persistent autonomous agent lifecycle
-- **HTTP precompile** — fetch real-time market data from Polymarket
-- **Scheduler precompile** — periodic re-evaluation of positions
+# 3. Deploy MarketFetcher
+forge script script/Deploy.s.sol:DeployFetcher \
+  --rpc-url $RITUAL_RPC_URL \
+  --broadcast -vvvv
 
-## 🔑 API Keys
+# 4. Deposit RITUAL into RitualWallet
+cast send <DEPLOYED_ADDRESS> "deposit()" \
+  --value 0.1ether \
+  --rpc-url $RITUAL_RPC_URL \
+  --private-key $PRIVATE_KEY
 
-| Key | Where to get it | Required? |
-|-----|----------------|-----------|
-| NVIDIA NIM | [build.nvidia.com](https://build.nvidia.com/explore/llama) (free tier) | Yes, for analysis |
-| Polymarket | None needed — data is public via CLOB API | No |
-| Ritual Chain | None yet — testnet is free | For on-chain deployment |
+# 5. Fetch Polymarket markets on-chain
+cast send <DEPLOYED_ADDRESS> "fetchMarkets(uint256)" 10 \
+  --rpc-url $RITUAL_RPC_URL \
+  --private-key $PRIVATE_KEY
 
-## 📁 Project Structure
-
+# 6. Read the result
+cast call <DEPLOYED_ADDRESS> "getLastResult()(uint16,string,bytes)" \
+  --rpc-url $RITUAL_RPC_URL
 ```
-app/
-├── api/proxy/route.ts        # Polymarket CORS proxy (Vercel route handler)
-├── layout.tsx                # Root layout
-├── page.tsx                  # Main app page
-└── globals.css               # Tailwind imports
-```
 
-## 📄 License
+### How It Works
+
+1. Your contract calls the **HTTP precompile (0x0801)** with a URL to the Polymarket CLOB API
+2. Ritual's block builder creates a commitment and a TEE executor performs the HTTP call off-chain
+3. The result is settled back on-chain in the same transaction via fulfilled replay
+4. You read the result from the contract's state
+
+The same flow applies for LLM analysis — your contract calls the **LLM precompile (0x0802)** with a prompt, and a TEE executor runs inference then settles the result.
+
+### Ritual Chain Resources
+
+| Resource | Link |
+|----------|------|
+| Faucet | https://faucet.ritual.net |
+| RPC | `https://rpc.ritualfoundation.org` |
+| Explorer | https://explorer.ritualfoundation.org |
+| Chain ID | `1979` |
+
+---
+
+# 🔑 API Keys
+
+| Key | Where | Required for |
+|-----|-------|-------------|
+| NVIDIA NIM | [build.nvidia.com](https://build.nvidia.com) (free tier) | Frontend analysis |
+| RITUAL testnet | [Faucet](https://faucet.ritual.net) (free) | Contract deployment |
+| PRIVATE_KEY | Your wallet (0x-prefixed) | Contract deployment |
+
+---
+
+# 📄 License
 
 MIT
