@@ -25,26 +25,61 @@ Deploy the contracts to Ritual Chain — anyone with testnet RITUAL from the [fa
 
 **Prerequisites:** [Foundry](https://book.getfoundry.sh/getting-started/installation)
 
+### Deploy MarketFetcher (basic on-chain fetch)
+
 ```bash
 cd contracts
-cp .env.example .env   # add your PRIVATE_KEY, HTTP_EXECUTOR, LLM_EXECUTOR
+cp .env.example .env   # add PRIVATE_KEY + HTTP_EXECUTOR
+
+# Find an HTTP executor from TEEServiceRegistry
+cast call 0x9644e8562cE0Fe12b4deeC4163c064A8862Bf47F \
+  "getServicesByCapability(uint8,bool)((address,address,uint8,bytes,bytes,bytes32,uint8),bool,bytes32[])" \
+  0 true --rpc-url $RITUAL_RPC_URL
 
 # Deploy
 forge script script/Deploy.s.sol:DeployFetcher \
   --rpc-url $RITUAL_RPC_URL --broadcast -vvvv
 
-# Fund the RitualWallet
+# Fund RitualWallet + fetch
 cast send <ADDRESS> "deposit()" --value 0.1ether \
   --rpc-url $RITUAL_RPC_URL --private-key $PRIVATE_KEY
-
-# Fetch markets on-chain
 cast send <ADDRESS> "fetchMarkets(uint256)" 10 \
   --rpc-url $RITUAL_RPC_URL --private-key $PRIVATE_KEY
-
-# Read the result
 cast call <ADDRESS> "getLastResult()(uint16,string,bytes)" \
   --rpc-url $RITUAL_RPC_URL
 ```
+
+### Deploy ScheduledMarketFetcher (daily auto-fetch)
+
+Uses Ritual's **Scheduler precompile (0x56e7)** — automatically fetches Polymarket data every ~24h (250K blocks). Stores results in round-based snapshots.
+
+```bash
+# Deploy
+forge script script/Deploy.s.sol:DeployScheduled \
+  --rpc-url $RITUAL_RPC_URL --broadcast -vvvv
+
+# Fund RitualWallet
+cast send <ADDRESS> "deposit()" --value 0.5ether \
+  --rpc-url $RITUAL_RPC_URL --private-key $PRIVATE_KEY
+
+# Start the scheduler
+cast send <ADDRESS> "startScheduler()" \
+  --rpc-url $RITUAL_RPC_URL --private-key $PRIVATE_KEY
+
+# Check state (0=SCHEDULED)
+cast call <ADDRESS> "getSchedulerState()(uint8)" \
+  --rpc-url $RITUAL_RPC_URL
+
+# Manual fetch + read
+cast send <ADDRESS> "fetchNow()" \
+  --rpc-url $RITUAL_RPC_URL --private-key $PRIVATE_KEY
+cast call <ADDRESS> "getLatest()(uint256,uint16,bytes,string)" \
+  --rpc-url $RITUAL_RPC_URL
+```
+
+### Deploy MarketAnalyzer (on-chain LLM analysis)
+
+Same as MarketFetcher + calls the **LLM precompile (0x0802)** to analyze market sentiment on-chain.
 
 ### Deploy Web App to Vercel
 
@@ -62,8 +97,9 @@ Frontend (browser)
 └── NVIDIA NIM API       ──→  AI Analysis (browser-side, key in localStorage)
 
 Contracts (on-chain)
-├── MarketFetcher   →  HTTP precompile (0x0801) → fetches Polymarket data on-chain
-└── MarketAnalyzer  →  HTTP + LLM precompiles   → fetches + analyzes on-chain
+├── MarketFetcher            →  HTTP precompile (0x0801) → fetches Polymarket data on-chain
+├── MarketAnalyzer           →  HTTP + LLM precompiles   → fetches + analyzes on-chain
+└── ScheduledMarketFetcher   →  HTTP + Scheduler         → auto-fetches daily on-chain
 ```
 
 ## How the Contracts Work
