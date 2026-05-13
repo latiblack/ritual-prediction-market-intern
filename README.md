@@ -1,50 +1,31 @@
-# ⌭ MKT_INTEL Lite
+# 🔮 ritual-prediction-market-intern
 
-**Zero-backend prediction market intelligence.** Browse Polymarket markets and analyze them with AI — no backend, no database, no cron jobs.
+**Prediction market intelligence, built for Ritual Chain.** Browse Polymarket markets and analyze them with AI. Zero backend — runs entirely in your browser.
 
-Built for **Ritual Chain** deployment. Currently runs off-chain with NVIDIA NIM API for AI analysis.
+## What it does
 
-## Features
-
-- Browse live Polymarket markets (via proxy)
-- Analyze any market with DeepSeek v4 Flash (via NVIDIA NIM API)
-- Switch between models (DeepSeek R1, Llama 3.1, Mistral)
-- No account required — just a free NVIDIA API key
-- Keys stored locally in your browser (localStorage)
-
-## Get a Free API Key
-
-1. Go to [build.nvidia.com](https://build.nvidia.com)
-2. Sign up for a free account
-3. Click your avatar → **Personal API Keys** → **Generate API Key**
-4. Paste the key into the app
-
-NVIDIA gives **free credits** to new accounts — enough for hundreds of analyses.
-
-## Deploy
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/latiblack/prediction-market-lite)
-
-One click deploy. No backend to configure. No database to set up.
+- Fetches live markets from Polymarket API
+- Analyzes market sentiment, narratives, and edge with LLMs (NVIDIA NIM)
+- Deployable to Ritual Chain for on-chain inference
 
 ## Tech Stack
 
-- **Next.js 16** (App Router)
-- **Polymarket CLOB API** (proxied through a single serverless function)
-- **NVIDIA NIM API** (called directly from browser)
-- **Tailwind CSS v4**
+- **Frontend:** Next.js 16 + Tailwind v4
+- **Data:** Polymarket CLOB API (via thin Vercel proxy)
+- **AI:** NVIDIA NIM API (direct from browser)
+- **On-chain target:** Ritual Chain (via Sovereign Agent + LLM precompiles)
 
-## Ritual Chain Roadmap
+## Running Locally
 
-This is the open-source frontend. On-chain deployment will use:
+```bash
+npm install
+npm run dev
+```
 
-| Component | Current | Ritual Chain |
-|-----------|---------|-------------|
-| Data fetching | Serverless proxy | HTTP precompile (0x0801) |
-| AI analysis | NVIDIA API (browser) | LLM precompile (0x0802) |
-| Scheduling | Manual trigger | Scheduler sys contract (0x56e7) |
-| Alerts | — | On-chain condition alerts via Scheduler + HTTP precompile |
+## Deploy on Vercel
 
-## License
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/latiblack/ritual-prediction-market-intern)
 
-MIT
+---
+
+Built for [Ritual Chain](https://ritual.net) — the AI-native L1.
